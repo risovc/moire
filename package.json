@@ -1,0 +1,12 @@
+{
+  "name": "moire-magic-angle-lab",
+  "version": "2.0.0",
+  "private": true,
+  "description": "MoiréTwist 3D — Interactive Three.js simulation, Bistritzer-MacDonald continuum band solver & magic-angle formula workbench (arXiv:1901.10485) for Cloudflare Workers & Pages",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/verify_physics.js && node tests/verify_bands.js",
+    "deploy": "npx wrangler deploy",
+    "deploy:pages": "npx wrangler pages deploy . --project-name=moire-magic-angle-lab"
+  }
+}

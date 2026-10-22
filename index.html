@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoiréTwist 3D — Magic-Angle Hierarchy &amp; Superconductivity Research Lab</title>
+  <meta name="description" content="Interactive 3D Three.js simulation and Bistritzer–MacDonald continuum band-structure solver for the Magic Angle Hierarchy in Twisted Graphene Multilayers (arXiv:1901.10485) and Inhomogeneous Twisted Trilayer Superconductivity &amp; Magnetic Order." />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three.module.min.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- 100% Unobstructed Full-Viewport 3D WebGL Canvas Container -->
+  <div id="canvasMount" aria-label="3D Moiré Superlattice and Superconductivity Viewport"></div>
+  <!-- Projected 3D labels (pointer-events: none) -->
+  <div id="labels3d" aria-hidden="true"></div>
+
+  <!-- Minimal Top-Center Scientific Telemetry & Spec Badge -->
+  <header id="topSpecBadge" class="top-spec-badge">
+    <div class="badge-header-row">
+      <div class="brand-block">
+        <span class="brand-tag">ARXIV:1901.10485 • BM CONTINUUM • MATTG JJ-LAB</span>
+        <h1 class="brand-title">MoiréTwist 3D — Magic-Angle Hierarchy &amp; Superconductivity</h1>
+      </div>
+      <div class="header-actions">
+        <div class="phase-pill" id="livePhaseBadge">Coherent Flat-Band Superconductor (BKT Phase)</div>
+        <button type="button" id="btnHelp" class="icon-btn" title="Guide, physics &amp; keyboard shortcuts (?)">? Guide</button>
+        <button type="button" id="btnHideHud" class="icon-btn" title="Hide telemetry header (Shift+H)">Hide HUD</button>
+      </div>
+    </div>
+
+    <div class="telemetry-strip" id="telemetryStrip">
+      <div class="tele-cell">
+        <span class="tele-label">STACK / SCALING λ<sub>k</sub><sup>(n)</sup></span>
+        <span class="tele-val" id="teleScaling">n=3, k=1 • √2 (1.4142)</span>
+      </div>
+      <div class="tele-cell">
+        <span class="tele-label">TWIST θ / MAGIC θ*</span>
+        <span class="tele-val" id="teleTheta">1.527° / 1.527°</span>
+      </div>
+      <div class="tele-cell">
+        <span class="tele-label">MOIRÉ L<sub>M</sub> &amp; ATOMS</span>
+        <span class="tele-val" id="teleMoire">9.23 nm • 16,896 C</span>
+      </div>
+      <div class="tele-cell">
+        <span class="tele-label" id="teleVelocityLabel">v<sub>F</sub>* / v<sub>F</sub> &amp; WIDTH W (analytic)</span>
+        <span class="tele-val" id="teleVelocity">0.008 • 2.81 meV</span>
+      </div>
+      <div class="tele-cell">
+        <span class="tele-label">T<sub>BKT</sub> &amp; STIFFNESS J<sub>s</sub></span>
+        <span class="tele-val accent-cyan" id="teleTbkt">2.64 K • Js 3.68 K</span>
+      </div>
+      <div class="tele-cell">
+        <span class="tele-label">PAULI B<sub>c∥</sub>/B<sub>P</sub> &amp; MAG M<sub>IVC</sub></span>
+        <span class="tele-val accent-rose" id="teleMagnetic">2.70× • M=0.31</span>
+      </div>
+    </div>
+
+    <div class="probe-readout" id="probeReadout">
+      <span>STM / Raycast Probe: click or hover 3D superlattice — (x=0.0 nm, y=0.0 nm) • AA weight=1.00 • Local Δ<sub>SC</sub>=0.88 • Spin M<sub>IVC</sub>=0.12</span>
+    </div>
+    <div class="legend-bar" id="legendBar"></div>
+  </header>
+
+  <!-- Unified Collapsible Bottom Control Dock -->
+  <section id="bottomDock" class="bottom-dock" aria-label="Simulation Controls Dock">
+    <div class="dock-handle-bar">
+      <div class="dock-tabs" role="tablist">
+        <button type="button" class="dock-tab active" data-tab="tab-stack" role="tab" aria-selected="true">1. Stack &amp; Twist</button>
+        <button type="button" class="dock-tab" data-tab="tab-mattg" role="tab" aria-selected="false">2. Inhomogeneous SC &amp; Magnetism</button>
+        <button type="button" class="dock-tab" data-tab="tab-formula" role="tab" aria-selected="false">3. Magic-Number Formula Lab</button>
+        <button type="button" class="dock-tab" data-tab="tab-bands" role="tab" aria-selected="false">4. Band Structure (BM numerics)</button>
+        <button type="button" class="dock-tab" data-tab="tab-visual" role="tab" aria-selected="false">5. Visibility &amp; Rendering</button>
+        <button type="button" class="dock-tab" data-tab="tab-export" role="tab" aria-selected="false">6. Export &amp; Deploy</button>
+      </div>
+      <div class="dock-right-actions">
+        <button type="button" id="btnSweepPlay" class="dock-action-btn" title="Play / pause automatic θ sweep (Space)">▶ Sweep θ</button>
+        <button type="button" id="btnToggleDock" class="dock-collapse-btn" title="Shortcut: H">▾ Hide Controls (H)</button>
+      </div>
+    </div>
+
+    <div class="dock-body" id="dockBody">
+      <!-- TAB 1: STACK & TWIST -->
+      <div class="tab-pane active" id="tab-stack" role="tabpanel">
+        <div class="dock-grid-4">
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Alternating-Twist Stack (±θ)</span>
+              <span class="card-sub" id="lblAlgebraicFormula">λ₁⁽³⁾ = 2 cos(π/4) = √2</span>
+            </div>
+            <div class="control-row">
+              <label for="inpLayersN">Graphene Layers <code>n</code>: <strong id="valLayersN">3 (MATTG)</strong></label>
+              <input type="range" id="inpLayersN" min="2" max="8" step="1" value="3" />
+            </div>
+            <div class="control-row">
+              <label for="inpTwistTheta">Twist Angle <code>θ</code>: <strong id="valTwistTheta">1.527°</strong> <span class="hint">(← → nudge)</span></label>
+              <input type="range" id="inpTwistTheta" min="0.15" max="2.50" step="0.005" value="1.527" />
+            </div>
+            <div class="control-row-split">
+              <div>
+                <label for="selModeK">Sector <code>k ≤ ⌊n/2⌋</code></label>
+                <select id="selModeK"><option value="1" selected>k = 1</option></select>
+              </div>
+              <div>
+                <label for="selHarmonicM">Harmonic <code>m</code> (α<sub>m</sub>)</label>
+                <select id="selHarmonicM">
+                  <option value="1" selected>m = 1 (α₁ = 0.586)</option>
+                  <option value="2">m = 2 (α₂ = 2.221)</option>
+                  <option value="3">m = 3 (α₃ = 3.751)</option>
+                  <option value="4">m = 4 (α₄ = 5.276)</option>
+                  <option value="5">m = 5 (α₅ = 6.795)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Magic Hierarchy Snap &amp; Sweep</span>
+              <button type="button" id="btnSnapActiveMagic" class="mini-action-btn" title="Snap θ to the exact sector magic angle">Snap θ → θ*<sub>n,k,m</sub></button>
+            </div>
+            <div class="preset-pills" id="magicPresetPills">
+              <button type="button" class="pill-btn" data-n="2" data-k="1" data-m="1" data-theta="1.080">n=2 TBG (1.08°)</button>
+              <button type="button" class="pill-btn active" data-n="3" data-k="1" data-m="1" data-theta="1.527">n=3 √2 MATTG (1.53°)</button>
+              <button type="button" class="pill-btn" data-n="4" data-k="1" data-m="1" data-theta="1.747">n=4 φ (1.75°)</button>
+              <button type="button" class="pill-btn" data-n="4" data-k="2" data-m="1" data-theta="0.667">n=4 φ⁻¹ (0.67°)</button>
+              <button type="button" class="pill-btn" data-n="5" data-k="1" data-m="1" data-theta="1.871">n=5 √3 (1.87°)</button>
+              <button type="button" class="pill-btn" data-n="6" data-k="1" data-m="1" data-theta="1.946">n=6 (1.95°)</button>
+              <button type="button" class="pill-btn" data-n="3" data-k="1" data-m="2" data-theta="0.403">n=3 m=2 (0.40°)</button>
+            </div>
+            <div class="control-row-split" style="margin-top:6px;">
+              <div>
+                <label for="inpSweepMin">Sweep range <strong id="valSweepRange">0.50° – 2.40°</strong></label>
+                <div class="dual-range">
+                  <input type="range" id="inpSweepMin" min="0.15" max="2.5" step="0.05" value="0.5" />
+                  <input type="range" id="inpSweepMax" min="0.15" max="2.5" step="0.05" value="2.4" />
+                </div>
+              </div>
+              <div>
+                <label for="inpSweepSpeed">Sweep speed <strong id="valSweepSpeed">0.25°/s</strong></label>
+                <input type="range" id="inpSweepSpeed" min="0.05" max="1.0" step="0.05" value="0.25" />
+              </div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Camera &amp; Overlays</span>
+              <span class="card-sub">Keys 1–6 • Click to probe</span>
+            </div>
+            <div class="camera-pills" id="cameraPresetPills">
+              <button type="button" class="cam-btn active" data-cam="isometric">1 Isometric</button>
+              <button type="button" class="cam-btn" data-cam="top">2 Top</button>
+              <button type="button" class="cam-btn" data-cam="side">3 Side</button>
+              <button type="button" class="cam-btn" data-cam="stm">4 STM</button>
+              <button type="button" class="cam-btn" data-cam="mbz">5 mBZ</button>
+              <button type="button" class="cam-btn" data-cam="closeup">6 Close-up</button>
+            </div>
+            <div class="toggle-checks">
+              <label class="chk-label"><input type="checkbox" id="chkLdos" checked /> Flat-band LDOS</label>
+              <label class="chk-label"><input type="checkbox" id="chkJJ" checked /> Josephson network</label>
+              <label class="chk-label"><input type="checkbox" id="chkSpins" checked /> Magnetic spins</label>
+              <label class="chk-label"><input type="checkbox" id="chkStm" checked /> STM nanoprobe</label>
+              <label class="chk-label"><input type="checkbox" id="chkMbz" checked /> mBZ + Dirac cone</label>
+              <label class="chk-label"><input type="checkbox" id="chkProtractor" checked /> Protractor ring</label>
+            </div>
+            <div class="control-row" style="margin-top:6px;">
+              <label for="inpExplodeZ">Interlayer exploded spacing: <strong id="valExplodeZ">0.42 nm</strong></label>
+              <input type="range" id="inpExplodeZ" min="0.16" max="0.95" step="0.02" value="0.42" />
+            </div>
+          </div>
+
+          <div class="control-card map-card">
+            <div class="card-title-row">
+              <span class="card-title">Real-Space Moiré Map</span>
+              <button type="button" id="btnMapPopout" class="mini-action-btn" title="Open large true-angle moiré viewer">⤢ Enlarge</button>
+            </div>
+            <canvas id="moireMapCanvas" class="moire-map-canvas" width="176" height="176" aria-label="2D real-space moiré pattern"></canvas>
+            <div class="control-row-split" style="margin-top:5px;">
+              <div>
+                <select id="selMapMode" title="Map rendering mode">
+                  <option value="lattice" selected>Lattice superposition</option>
+                  <option value="ldos">Flat-band LDOS</option>
+                  <option value="scmag">SC condensate + magnetism</option>
+                </select>
+              </div>
+              <div>
+                <label class="chk-label" style="margin-top:4px;"><input type="checkbox" id="chkMapTrueAngle" /> True θ (large patch)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: INHOMOGENEOUS SUPERCONDUCTOR & MAGNETIC ORDER -->
+      <div class="tab-pane" id="tab-mattg" role="tabpanel">
+        <div class="dock-grid-mattg">
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Inhomogeneity &amp; Magnetic Field</span>
+              <span class="card-sub">JJ array &amp; IVC order</span>
+            </div>
+            <div class="control-row">
+              <label for="inpSigmaTheta">Twist disorder <code>σ<sub>θ</sub>(r)</code>: <strong id="valSigmaTheta">0.040°</strong></label>
+              <input type="range" id="inpSigmaTheta" min="0.00" max="0.16" step="0.005" value="0.040" />
+            </div>
+            <div class="control-row">
+              <label for="inpBField">In-plane field <code>B<sub>∥</sub></code>: <strong id="valBField">0.50 T</strong></label>
+              <input type="range" id="inpBField" min="0.0" max="10.0" step="0.1" value="0.5" />
+            </div>
+            <div class="control-row">
+              <label for="inpTempK">Temperature <code>T</code>: <strong id="valTempK">0.35 K</strong></label>
+              <input type="range" id="inpTempK" min="0.05" max="3.50" step="0.05" value="0.35" />
+            </div>
+            <div class="card-title-row" style="margin-top:6px;">
+              <span class="card-title">Load experiment</span>
+              <span class="card-sub" id="expPresetRef">—</span>
+            </div>
+            <div class="preset-pills" id="experimentPresetPills"></div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Band Filling &amp; Chiral Relaxation</span>
+              <span class="card-sub">Pauli violation &amp; D-field</span>
+            </div>
+            <div class="control-row">
+              <label for="inpFillingNu">Moiré filling <code>ν</code> (e/supercell): <strong id="valFillingNu">-2.40</strong></label>
+              <input type="range" id="inpFillingNu" min="-4.0" max="4.0" step="0.05" value="-2.40" />
+            </div>
+            <div class="control-row">
+              <label for="inpKappa">Chiral ratio <code>κ = w<sub>AA</sub>/w<sub>AB</sub></code>: <strong id="valKappa">0.72</strong></label>
+              <input type="range" id="inpKappa" min="0.00" max="1.00" step="0.02" value="0.72" />
+            </div>
+            <div class="control-row">
+              <label for="inpDisplacementU">Displacement potential drop <code>U</code>: <strong id="valDisplacementU">15 meV</strong></label>
+              <input type="range" id="inpDisplacementU" min="0" max="60" step="1" value="15" />
+            </div>
+          </div>
+
+          <div class="control-card chart-card">
+            <div class="card-title-row">
+              <span class="card-title">BKT dome T<sub>BKT</sub>(θ), stiffness J<sub>s</sub> &amp; competing order M<sub>IVC</sub></span>
+              <span class="card-sub" id="mattgSummaryStat">Quantum geometric weight: 92%</span>
+            </div>
+            <div id="svgPhasePlotContainer" class="svg-plot-box clickable-plot" title="Click to enlarge"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: MAGIC-NUMBER FORMULA LAB -->
+      <div class="tab-pane" id="tab-formula" role="tabpanel">
+        <div class="dock-grid-formula">
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Next Magic Number Formula Explorer</span>
+              <button type="button" id="btnBulkLimitGamma" class="mini-action-btn" title="Set outer hopping γ = √2 to reach the bulk limit λ₁ = 2.0 at finite n">Set γ = √2 bulk limit</button>
+            </div>
+            <div class="control-row-split">
+              <div>
+                <label for="inpGammaOuter">Outer hopping <code>γ = t<sub>out</sub>/t<sub>in</sub></code>: <strong id="valGammaOuter">1.000</strong></label>
+                <input type="range" id="inpGammaOuter" min="0.50" max="1.80" step="0.01" value="1.00" />
+              </div>
+              <div>
+                <label for="inpDimerization">Bond alternation <code>δ<sub>dim</sub></code>: <strong id="valDimerization">0.00</strong></label>
+                <input type="range" id="inpDimerization" min="-0.35" max="0.35" step="0.01" value="0.00" />
+              </div>
+            </div>
+            <div class="control-row">
+              <label for="selFormulaPreset">Candidate magic-angle formula ansatz:</label>
+              <select id="selFormulaPreset">
+                <option value="chebyshev">F1: Khalaf–Vishwanath chiral Chebyshev</option>
+                <option value="boundary_gamma">F2: Boundary-renormalised γ-ansatz</option>
+                <option value="relaxation_hartree">F3: Relaxation + Hartree corrected</option>
+                <option value="dirac_optimal_tc" selected>F4: Odd-n Dirac-screening optimal-Tc</option>
+              </select>
+            </div>
+            <div class="control-row">
+              <label for="inpCustomFormula">Symbolic <code>θ*(n, k, m, gamma, kappa, U, nu)</code>:</label>
+              <div class="formula-input-group">
+                <input type="text" id="inpCustomFormula" value="2 * cos(PI * k / (n + 1)) * theta2 * (alpha1 / alpha_m) * (1 + (n % 2) * 0.025 * (1 + abs(U)/40))" />
+                <button type="button" id="btnEvalFormula" class="mini-action-btn">Apply</button>
+              </div>
+              <div id="formulaEvalResult" class="formula-eval-status">—</div>
+              <div id="formulaNumericAudit" class="formula-eval-status audit">BM numerical audit: computing…</div>
+            </div>
+          </div>
+
+          <div class="control-card chart-card">
+            <div class="card-title-row">
+              <span class="card-title">Analytic v<sub>F</sub>*(θ)/v<sub>F</sub> &amp; W(θ) (closed-form proxy)</span>
+              <span class="card-sub" id="formulaSweepSub">See tab 4 for BM numerics</span>
+            </div>
+            <div id="svgFormulaPlotContainer" class="svg-plot-box clickable-plot" title="Click to enlarge"></div>
+          </div>
+
+          <div class="control-card table-card">
+            <div class="card-title-row">
+              <span class="card-title">Hierarchy table (n=2..8) vs. experiment</span>
+              <span class="card-sub">Click a row to load</span>
+            </div>
+            <div class="table-scroll-wrap">
+              <table class="hierarchy-table">
+                <thead>
+                  <tr><th>n, k</th><th>Exact λ<sub>k</sub><sup>(n)</sup></th><th>m=1 θ*</th><th>m=2 θ*</th><th>Exp. θ*</th><th>Δ</th><th>Dirac</th></tr>
+                </thead>
+                <tbody id="hierarchyTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: BAND STRUCTURE (BISTRITZER–MACDONALD CONTINUUM NUMERICS) -->
+      <div class="tab-pane" id="tab-bands" role="tabpanel">
+        <div class="dock-grid-bands">
+          <div class="control-card chart-card">
+            <div class="card-title-row">
+              <span class="card-title">Moiré bands E(k) along K<sub>m</sub>→Γ<sub>m</sub>→M<sub>m</sub>→K'<sub>m</sub> + DOS</span>
+              <span class="card-sub" id="bandModeBadge">exact sector decomposition</span>
+            </div>
+            <div id="svgBandPlotContainer" class="svg-plot-box tall clickable-plot" title="Click to enlarge"></div>
+            <div id="bandReadout" class="formula-eval-status">BM numerics: computing…</div>
+          </div>
+
+          <div class="control-card chart-card">
+            <div class="card-title-row">
+              <span class="card-title">Numerical magic angles: v<sub>F</sub>*/v<sub>F</sub> vs α<sub>eff</sub> = σ<sub>k</sub> w<sub>AB</sub>/(ħv<sub>F</sub>k<sub>θ</sub>)</span>
+              <span class="card-sub" id="scanStatus">scanning…</span>
+            </div>
+            <div id="svgScanPlotContainer" class="svg-plot-box tall clickable-plot" title="Click to enlarge"></div>
+            <div id="scanReadout" class="formula-eval-status">—</div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Solver settings</span>
+              <span class="card-sub" id="bandTiming">—</span>
+            </div>
+            <div class="control-row-split">
+              <div>
+                <label for="selShells">Plane-wave shells</label>
+                <select id="selShells">
+                  <option value="1">1 (BM 8-band, fastest)</option>
+                  <option value="2" selected>2 (19+12 waves/layer)</option>
+                  <option value="3">3 (37+30, precise)</option>
+                </select>
+              </div>
+              <div>
+                <label for="selEnergyWindow">Energy window</label>
+                <select id="selEnergyWindow">
+                  <option value="20">±20 meV</option>
+                  <option value="60" selected>±60 meV</option>
+                  <option value="150">±150 meV</option>
+                  <option value="300">±300 meV</option>
+                </select>
+              </div>
+            </div>
+            <div class="toggle-checks" style="grid-template-columns: 1fr;">
+              <label class="chk-label"><input type="checkbox" id="chkFullStack" /> Force full-stack numerics (auto when U ≠ 0)</label>
+              <label class="chk-label"><input type="checkbox" id="chkAllSectors" checked /> Overlay the other sectors' flat bands</label>
+              <label class="chk-label"><input type="checkbox" id="chkDos" checked /> Compute DOS (k-mesh 9×9)</label>
+              <label class="chk-label"><input type="checkbox" id="chkLiveBands" checked /> Live recompute while dragging θ</label>
+            </div>
+            <div class="export-btn-grid" style="margin-top:6px;">
+              <button type="button" id="btnRecomputeBands" class="action-btn primary">Recompute bands</button>
+              <button type="button" id="btnSnapNumeric" class="action-btn" title="Snap θ to the numerically found magic angle for this sector">Snap θ → numeric θ*</button>
+            </div>
+            <div class="formula-eval-status" id="bandNote">Sector mode uses the exact Khalaf et al. decoupling (U = 0). Odd n adds an uncoupled Dirac cone (rose).</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: VISIBILITY & RENDERING -->
+      <div class="tab-pane" id="tab-visual" role="tabpanel">
+        <div class="dock-grid-3">
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Rendering &amp; theme</span>
+              <span class="card-sub" id="renderStats">—</span>
+            </div>
+            <div class="control-row-split">
+              <div>
+                <label for="selTheme">Theme (T)</label>
+                <select id="selTheme">
+                  <option value="dark" selected>Dark cryo-lab</option>
+                  <option value="paper">Paper-white (figures)</option>
+                </select>
+              </div>
+              <div>
+                <label for="selQuality">Lattice quality</label>
+                <select id="selQuality">
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+            </div>
+            <div class="toggle-checks">
+              <label class="chk-label"><input type="checkbox" id="chkLabels" checked /> 3D labels (L)</label>
+              <label class="chk-label"><input type="checkbox" id="chkLegend" checked /> Colour legend</label>
+              <label class="chk-label"><input type="checkbox" id="chkAutoRotate" /> Auto-rotate (R)</label>
+              <label class="chk-label"><input type="checkbox" id="chkRipple" checked /> LDOS phase ripple</label>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Moiré clarity</span>
+              <span class="card-sub">visual, not physical</span>
+            </div>
+            <div class="control-row">
+              <label for="inpMagnification">Twist magnification (3D lattice): <strong id="valMagnification">5.2×</strong></label>
+              <input type="range" id="inpMagnification" min="1" max="9" step="0.1" value="5.2" />
+            </div>
+            <div class="control-row-split">
+              <div>
+                <label for="inpLdosOpacity">LDOS opacity: <strong id="valLdosOpacity">0.42</strong></label>
+                <input type="range" id="inpLdosOpacity" min="0" max="1" step="0.02" value="0.42" />
+              </div>
+              <div>
+                <label for="inpLdosHeight">LDOS relief: <strong id="valLdosHeight">1.0×</strong></label>
+                <input type="range" id="inpLdosHeight" min="0" max="2.5" step="0.1" value="1.0" />
+              </div>
+            </div>
+            <div class="control-row-split">
+              <div>
+                <label for="inpAtomScale">Atom size: <strong id="valAtomScale">1.0×</strong></label>
+                <input type="range" id="inpAtomScale" min="0.3" max="2.2" step="0.1" value="1.0" />
+              </div>
+              <div>
+                <label for="inpBondOpacity">Bond opacity: <strong id="valBondOpacity">0.58</strong></label>
+                <input type="range" id="inpBondOpacity" min="0" max="1" step="0.02" value="0.58" />
+              </div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Per-layer visibility &amp; focus</span>
+              <span class="card-sub">alternating ±θ/2</span>
+            </div>
+            <div class="toggle-checks" id="layerVisibilityChecks"></div>
+            <div class="preset-pills" style="margin-top:6px;" id="focusPills">
+              <button type="button" class="pill-btn" data-focus="all">Show all</button>
+              <button type="button" class="pill-btn" data-focus="lattice">Lattice only</button>
+              <button type="button" class="pill-btn" data-focus="ldos">LDOS focus</button>
+              <button type="button" class="pill-btn" data-focus="jj">Josephson focus</button>
+              <button type="button" class="pill-btn" data-focus="spins">Magnetism focus</button>
+              <button type="button" class="pill-btn" data-focus="pair">Top 2 layers</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 6: EXPORT & DEPLOY -->
+      <div class="tab-pane" id="tab-export" role="tabpanel">
+        <div class="dock-grid-3">
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Capture &amp; export</span>
+              <span class="card-sub">zero external dependencies</span>
+            </div>
+            <div class="export-btn-grid">
+              <button type="button" id="btnCapturePng" class="action-btn primary">3D PNG snapshot</button>
+              <button type="button" id="btnExportJson" class="action-btn">State + hierarchy (.json)</button>
+              <button type="button" id="btnExportCsv" class="action-btn">Magic table (.csv)</button>
+              <button type="button" id="btnExportBandsCsv" class="action-btn">Band structure (.csv)</button>
+              <button type="button" id="btnExportPlotsSvg" class="action-btn">Plots (.svg)</button>
+              <button type="button" id="btnCopyShareUrl" class="action-btn">Copy share link</button>
+            </div>
+            <div id="exportStatusMsg" class="formula-eval-status">Ready to export high-resolution 3D render, band data or hierarchy tables.</div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Scientific grounding</span>
+              <span class="card-sub">verified equations</span>
+            </div>
+            <ul class="ref-list">
+              <li><strong>Khalaf, Kruchkov, Tarnopolsky &amp; Vishwanath, PRB 100, 085109 (arXiv:1901.10485):</strong> alternating-twist <em>n</em>-layers map exactly onto ⌊<em>n</em>/2⌋ bilayers with <code>λ<sub>k</sub> = 2 cos(πk/(n+1))</code> (√2, φ, √3, …) plus a Dirac cone for odd <em>n</em>.</li>
+              <li><strong>Tarnopolsky, Kruchkov &amp; Vishwanath, PRL 122, 106405:</strong> chiral magic couplings <code>α<sub>m</sub> = 0.586, 2.221, 3.751, …</code>, Δα → 3/2.</li>
+              <li><strong>Bistritzer &amp; MacDonald, PNAS 108, 12233:</strong> continuum model solved here by plane-wave diagonalisation (tab 4), reproducing the exact chiral flat band at α₁.</li>
+              <li><strong>MATTG experiments:</strong> Park et al. Nature 590 (2021); Cao et al. Nature 595 (2021) — Pauli-limit violation 2–3×; twist-disordered Josephson networks with competing in-plane magnetic order.</li>
+            </ul>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title-row">
+              <span class="card-title">Cloudflare Workers &amp; Pages</span>
+              <span class="card-sub">GitHub auto-deploy ready</span>
+            </div>
+            <p class="deploy-note">
+              Includes <code>wrangler.toml</code> + <code>worker.js</code> (Cloudflare Workers Static Assets) and <code>_headers</code> (Cloudflare Pages), plus bundled <code>vendor/three.module.min.js</code> &amp; Web Worker <code>band-worker.js</code>.
+            </p>
+            <ol class="deploy-steps">
+              <li>Upload repo to GitHub &amp; connect in <strong>Cloudflare Workers &amp; Pages</strong></li>
+              <li>Workers build command: <code>npx wrangler deploy</code> • Pages output dir: <code>/</code></li>
+              <li><a href="./download.html?auto=1" target="_blank" rel="noopener" style="color:#38bdf8;font-weight:600;text-decoration:underline;">📦 Open Verified macOS Package Downloader (.zip &amp; .tar.gz)</a></li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Guide / Help Modal -->
+  <div id="helpModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Guide">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span class="modal-title">MoiréTwist 3D — Guide</span>
+        <button type="button" class="mini-action-btn" data-close-modal="helpModal">Close (Esc)</button>
+      </div>
+      <div class="modal-body help-grid">
+        <section>
+          <h3>Physics in this lab</h3>
+          <ul>
+            <li><strong>Magic hierarchy:</strong> θ*<sub>n,k,m</sub> = 2cos(πk/(n+1)) · (α₁/α<sub>m</sub>) · θ*<sub>2,1</sub>. The 3D stack, telemetry and tab 3 use the exact SVD generalisation σ<sub>k</sub>(γ, δ) of the chain coupling.</li>
+            <li><strong>BM numerics (tab 4):</strong> plane-wave diagonalisation of the continuum Hamiltonian. Sector mode is exact for U = 0; U ≠ 0 triggers the full 2n·N<sub>G</sub> stack. The α-scan locates velocity zeros numerically — compare them with your candidate formula.</li>
+            <li><strong>Inhomogeneous SC (tab 2):</strong> σ<sub>θ</sub>(r) creates AA-island puddles coupled as a Josephson network; T<sub>BKT</sub>, J<sub>s</sub>, Pauli-limit violation and the competing IVC magnetic order follow MATTG phenomenology.</li>
+            <li><strong>Visual conventions:</strong> gold = AA flat-band peak, cyan = SC condensate / weak link, rose = IVC spins &amp; Dirac cone. The 3D lattice twist is magnified (tab 5) — the 2D map "true θ" mode shows the physical pattern.</li>
+          </ul>
+        </section>
+        <section>
+          <h3>Keyboard shortcuts</h3>
+          <ul class="shortcut-list">
+            <li><kbd>H</kbd> hide / show control dock</li>
+            <li><kbd>Shift</kbd>+<kbd>H</kbd> hide / show telemetry header</li>
+            <li><kbd>Space</kbd> play / pause θ sweep</li>
+            <li><kbd>←</kbd> <kbd>→</kbd> nudge θ by 0.005° (<kbd>Shift</kbd>: 0.05°)</li>
+            <li><kbd>↑</kbd> <kbd>↓</kbd> add / remove a graphene layer</li>
+            <li><kbd>1</kbd>–<kbd>6</kbd> camera presets</li>
+            <li><kbd>L</kbd> labels • <kbd>T</kbd> theme • <kbd>R</kbd> auto-rotate • <kbd>M</kbd> snap to magic angle</li>
+            <li><kbd>?</kbd> this guide • <kbd>Esc</kbd> close dialogs</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enlarged Plot Modal -->
+  <div id="plotModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Enlarged plot">
+    <div class="modal-card wide">
+      <div class="modal-head">
+        <span class="modal-title" id="plotModalTitle">Plot</span>
+        <div class="modal-actions">
+          <button type="button" id="btnPlotExportSvg" class="mini-action-btn">Download SVG</button>
+          <button type="button" class="mini-action-btn" data-close-modal="plotModal">Close (Esc)</button>
+        </div>
+      </div>
+      <div class="modal-body plot-modal-body" id="plotModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Enlarged Moiré Map Modal -->
+  <div id="mapModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Enlarged moiré map">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span class="modal-title" id="mapModalTitle">Real-space moiré map</span>
+        <div class="modal-actions">
+          <button type="button" id="btnMapDownload" class="mini-action-btn">Download PNG</button>
+          <button type="button" class="mini-action-btn" data-close-modal="mapModal">Close (Esc)</button>
+        </div>
+      </div>
+      <div class="modal-body map-modal-body">
+        <canvas id="moireMapLarge" width="640" height="640"></canvas>
+        <div id="mapModalCaption" class="formula-eval-status"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./physics-engine.js"></script>
+  <script src="./bandstructure.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

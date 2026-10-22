@@ -1,0 +1,9 @@
+{
+  "name": "MoiréTwist 3D — Magic-Angle Hierarchy & Superconductivity Lab",
+  "short_name": "MoiréTwist 3D",
+  "description": "Interactive 3D Three.js simulation of Magic Angle Hierarchy in Twisted Graphene Multilayers (arXiv:1901.10485) and Inhomogeneous Twisted Trilayer Superconductivity & Magnetic Order.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#060b16",
+  "theme_color": "#38bdf8"
+}
