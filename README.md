@@ -2,6 +2,9 @@
 
 Interactive 3D **Three.js (r161)** simulation, **Bistritzer–MacDonald continuum band-structure solver** and formula-discovery workbench for **alternating-twist graphene multilayers** and **inhomogeneous moiré superconductivity**, ready for zero-build hosting on **Cloudflare Pages**.
 
+## Demo
+[moire.chakrabortty.in](https://moire.chakrabortty.in)
+
 ## Scientific Grounding
 
 1. **Magic Angle Hierarchy in Twisted Graphene Multilayers** — E. Khalaf, A. J. Kruchkov, G. Tarnopolsky, and A. Vishwanath, *Phys. Rev. B* **100**, 085109 (2019) ([arXiv:1901.10485](https://arxiv.org/pdf/1901.10485)):
